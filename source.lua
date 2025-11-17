@@ -1,7 +1,7 @@
 --[[
 	StarField Interface Suite
-	Based on Rayfield Interface Suite by Sirius
-	Enhanced and modified for improved performance and features
+	Enhanced version of Rayfield Library
+	Improved performance, features and customization
 ]]
 
 if debugX then
@@ -13,12 +13,12 @@ local function getService(name)
 	return if cloneref then cloneref(service) else service
 end
 
--- Improved loadWithTimeout with better error handling and caching
+-- Enhanced loading with better error handling and caching
 local function loadWithTimeout(url: string, timeout: number?): ...any
 	assert(type(url) == "string", "Expected string, got " .. type(url))
 	timeout = timeout or 5
 	
-	-- Cache to avoid repeated requests
+	-- Cache system to avoid repeated requests
 	if not loadWithTimeout.cache then
 		loadWithTimeout.cache = {}
 	end
@@ -64,82 +64,60 @@ local function loadWithTimeout(url: string, timeout: number?): ...any
 	
 	if success then
 		loadWithTimeout.cache[url] = result
+	else
+		warn(`Failed to process {url}: {result}`)
 	end
 	
 	return if success then result else nil
 end
 
 local requestsDisabled = true
-local InterfaceBuild = 'SF1'
+local InterfaceBuild = 'STAR2'
 local Release = "StarField Build 2.0"
 local StarFieldFolder = "StarField"
 local ConfigurationFolder = StarFieldFolder.."/Configurations"
 local ConfigurationExtension = ".sfld"
 
--- Enhanced settings system with validation
+-- Enhanced settings system
 local settingsTable = {
 	General = {
 		starfieldOpen = {Type = 'bind', Value = 'K', Name = 'StarField Keybind'},
-		uiScale = {Type = 'slider', Value = 100, Range = {80, 120}, Name = 'UI Scale'},
+		uiScale = {Type = 'slider', Value = 100, Range = {50, 150}, Name = 'UI Scale'},
 		animationSpeed = {Type = 'slider', Value = 1, Range = {0.5, 2}, Name = 'Animation Speed'},
 	},
 	System = {
 		usageAnalytics = {Type = 'toggle', Value = true, Name = 'Anonymised Analytics'},
+		performanceMode = {Type = 'toggle', Value = false, Name = 'Performance Mode'},
 		autoSave = {Type = 'toggle', Value = true, Name = 'Auto Save Config'},
 	}
 }
 
 local overriddenSettings = {}
-
--- Improved settings management
-local SettingsManager = {}
-SettingsManager.__index = SettingsManager
-
-function SettingsManager.new()
-	local self = setmetatable({}, SettingsManager)
-	self.settings = {}
-	self.overrides = {}
-	self.listeners = {}
-	return self
+local function overrideSetting(category: string, name: string, value: any)
+	overriddenSettings[`{category}.{name}`] = value
 end
 
-function SettingsManager:get(category, name)
-	if self.overrides[`{category}.{name}`] ~= nil then
-		return self.overrides[`{category}.{name}`]
-	elseif self.settings[category] and self.settings[category][name] then
-		return self.settings[category][name].Value
-	end
-	return nil
+local function getSetting(category: string, name: string): any
+	return overriddenSettings[`{category}.{name}`] or (settingsTable[category] and settingsTable[category][name] and settingsTable[category][name].Value)
 end
 
-function SettingsManager:set(category, name, value)
-	if not self.settings[category] then
-		self.settings[category] = {}
-	end
-	self.settings[category][name] = self.settings[category][name] or {}
-	self.settings[category][name].Value = value
-	
-	-- Notify listeners
-	if self.listeners[`{category}.{name}`] then
-		for _, callback in ipairs(self.listeners[`{category}.{name}`]) do
-			task.spawn(callback, value)
-		end
-	end
-end
+local HttpService = getService('HttpService')
+local RunService = getService('RunService')
+local UserInputService = getService("UserInputService")
+local TweenService = getService("TweenService")
+local Players = getService("Players")
+local CoreGui = getService("CoreGui")
 
-function SettingsManager:override(category, name, value)
-	self.overrides[`{category}.{name}`] = value
-end
+local useStudio = RunService:IsStudio()
+local settingsCreated = false
+local settingsInitialized = false
+local cachedSettings
 
-function SettingsManager:onChange(category, name, callback)
-	local key = `{category}.{name}`
-	self.listeners[key] = self.listeners[key] or {}
-	table.insert(self.listeners[key], callback)
-end
+-- Enhanced prompt system
+local prompt = useStudio and require(script.Parent.prompt) or loadWithTimeout('https://raw.githubusercontent.com/SiriusSoftwareLtd/Sirius/refs/heads/request/prompt.lua')
+local requestFunc = (syn and syn.request) or (fluxus and fluxus.request) or (http and http.request) or http_request or request
 
-local settingsManager = SettingsManager.new()
-
--- Enhanced theme system with gradient support
+-- Enhanced theme system with more customization
 local StarFieldLibrary = {
 	Flags = {},
 	Theme = {
@@ -148,450 +126,798 @@ local StarFieldLibrary = {
 			Background = Color3.fromRGB(25, 25, 25),
 			Topbar = Color3.fromRGB(34, 34, 34),
 			Shadow = Color3.fromRGB(20, 20, 20),
-			-- ... rest of default theme
+			NotificationBackground = Color3.fromRGB(20, 20, 20),
+			TabBackground = Color3.fromRGB(80, 80, 80),
+			TabStroke = Color3.fromRGB(85, 85, 85),
+			TabBackgroundSelected = Color3.fromRGB(210, 210, 210),
+			TabTextColor = Color3.fromRGB(240, 240, 240),
+			SelectedTabTextColor = Color3.fromRGB(50, 50, 50),
+			ElementBackground = Color3.fromRGB(35, 35, 35),
+			ElementBackgroundHover = Color3.fromRGB(40, 40, 40),
+			SecondaryElementBackground = Color3.fromRGB(25, 25, 25),
+			ElementStroke = Color3.fromRGB(50, 50, 50),
+			SecondaryElementStroke = Color3.fromRGB(40, 40, 40),
+			SliderBackground = Color3.fromRGB(50, 138, 220),
+			SliderProgress = Color3.fromRGB(50, 138, 220),
+			SliderStroke = Color3.fromRGB(58, 163, 255),
+			ToggleBackground = Color3.fromRGB(30, 30, 30),
+			ToggleEnabled = Color3.fromRGB(0, 146, 214),
+			ToggleDisabled = Color3.fromRGB(100, 100, 100),
+			ToggleEnabledStroke = Color3.fromRGB(0, 170, 255),
+			ToggleDisabledStroke = Color3.fromRGB(125, 125, 125),
+			ToggleEnabledOuterStroke = Color3.fromRGB(100, 100, 100),
+			ToggleDisabledOuterStroke = Color3.fromRGB(65, 65, 65),
+			DropdownSelected = Color3.fromRGB(40, 40, 40),
+			DropdownUnselected = Color3.fromRGB(30, 30, 30),
+			InputBackground = Color3.fromRGB(30, 30, 30),
+			InputStroke = Color3.fromRGB(65, 65, 65),
+			PlaceholderColor = Color3.fromRGB(178, 178, 178),
+			AccentColor = Color3.fromRGB(0, 146, 214),
 		},
 		
 		Cosmic = {
 			TextColor = Color3.fromRGB(255, 255, 255),
-			Background = Color3.fromRGB(10, 15, 30),
-			Topbar = Color3.fromRGB(20, 25, 45),
-			Shadow = Color3.fromRGB(5, 10, 25),
-			ElementBackground = Color3.fromRGB(30, 35, 60),
-			ElementBackgroundHover = Color3.fromRGB(40, 45, 75),
-			-- Cosmic theme colors
+			Background = Color3.fromRGB(10, 10, 35),
+			Topbar = Color3.fromRGB(20, 20, 55),
+			Shadow = Color3.fromRGB(5, 5, 25),
+			NotificationBackground = Color3.fromRGB(15, 15, 40),
+			TabBackground = Color3.fromRGB(40, 40, 80),
+			TabStroke = Color3.fromRGB(60, 60, 120),
+			TabBackgroundSelected = Color3.fromRGB(80, 100, 255),
+			TabTextColor = Color3.fromRGB(200, 200, 255),
+			SelectedTabTextColor = Color3.fromRGB(255, 255, 255),
+			ElementBackground = Color3.fromRGB(25, 25, 60),
+			ElementBackgroundHover = Color3.fromRGB(35, 35, 80),
+			SecondaryElementBackground = Color3.fromRGB(20, 20, 45),
+			ElementStroke = Color3.fromRGB(60, 60, 120),
+			SecondaryElementStroke = Color3.fromRGB(45, 45, 90),
+			SliderBackground = Color3.fromRGB(40, 60, 150),
+			SliderProgress = Color3.fromRGB(80, 100, 255),
+			SliderStroke = Color3.fromRGB(100, 120, 255),
+			ToggleBackground = Color3.fromRGB(30, 30, 70),
+			ToggleEnabled = Color3.fromRGB(80, 100, 255),
+			ToggleDisabled = Color3.fromRGB(60, 60, 100),
+			ToggleEnabledStroke = Color3.fromRGB(100, 120, 255),
+			ToggleDisabledStroke = Color3.fromRGB(80, 80, 140),
+			ToggleEnabledOuterStroke = Color3.fromRGB(60, 80, 180),
+			ToggleDisabledOuterStroke = Color3.fromRGB(40, 40, 80),
+			DropdownSelected = Color3.fromRGB(35, 35, 90),
+			DropdownUnselected = Color3.fromRGB(25, 25, 60),
+			InputBackground = Color3.fromRGB(25, 25, 60),
+			InputStroke = Color3.fromRGB(70, 70, 130),
+			PlaceholderColor = Color3.fromRGB(150, 150, 200),
+			AccentColor = Color3.fromRGB(80, 100, 255),
 		},
-		
+
 		Nebula = {
-			TextColor = Color3.fromRGB(255, 255, 255),
+			TextColor = Color3.fromRGB(255, 240, 245),
 			Background = Color3.fromRGB(40, 10, 50),
 			Topbar = Color3.fromRGB(60, 20, 70),
 			Shadow = Color3.fromRGB(30, 5, 40),
-			ElementBackground = Color3.fromRGB(80, 30, 90),
-			ElementBackgroundHover = Color3.fromRGB(100, 40, 110),
-			-- Nebula theme colors
+			NotificationBackground = Color3.fromRGB(45, 15, 55),
+			TabBackground = Color3.fromRGB(80, 40, 100),
+			TabStroke = Color3.fromRGB(100, 60, 120),
+			TabBackgroundSelected = Color3.fromRGB(180, 80, 200),
+			TabTextColor = Color3.fromRGB(240, 200, 250),
+			SelectedTabTextColor = Color3.fromRGB(255, 255, 255),
+			ElementBackground = Color3.fromRGB(50, 25, 65),
+			ElementBackgroundHover = Color3.fromRGB(65, 35, 80),
+			SecondaryElementBackground = Color3.fromRGB(45, 20, 55),
+			ElementStroke = Color3.fromRGB(90, 50, 110),
+			SecondaryElementStroke = Color3.fromRGB(75, 40, 95),
+			SliderBackground = Color3.fromRGB(120, 40, 140),
+			SliderProgress = Color3.fromRGB(160, 60, 180),
+			SliderStroke = Color3.fromRGB(180, 80, 200),
+			ToggleBackground = Color3.fromRGB(55, 30, 70),
+			ToggleEnabled = Color3.fromRGB(160, 60, 180),
+			ToggleDisabled = Color3.fromRGB(90, 60, 100),
+			ToggleEnabledStroke = Color3.fromRGB(180, 80, 200),
+			ToggleDisabledStroke = Color3.fromRGB(110, 70, 120),
+			ToggleEnabledOuterStroke = Color3.fromRGB(120, 40, 140),
+			ToggleDisabledOuterStroke = Color3.fromRGB(70, 40, 80),
+			DropdownSelected = Color3.fromRGB(65, 30, 80),
+			DropdownUnselected = Color3.fromRGB(50, 25, 65),
+			InputBackground = Color3.fromRGB(50, 25, 65),
+			InputStroke = Color3.fromRGB(95, 55, 115),
+			PlaceholderColor = Color3.fromRGB(180, 140, 200),
+			AccentColor = Color3.fromRGB(160, 60, 180),
+		},
+
+		Solar = {
+			TextColor = Color3.fromRGB(255, 250, 240),
+			Background = Color3.fromRGB(40, 30, 15),
+			Topbar = Color3.fromRGB(60, 45, 20),
+			Shadow = Color3.fromRGB(30, 20, 10),
+			NotificationBackground = Color3.fromRGB(50, 35, 20),
+			TabBackground = Color3.fromRGB(90, 65, 30),
+			TabStroke = Color3.fromRGB(110, 80, 40),
+			TabBackgroundSelected = Color3.fromRGB(255, 180, 60),
+			TabTextColor = Color3.fromRGB(255, 240, 200),
+			SelectedTabTextColor = Color3.fromRGB(50, 35, 10),
+			ElementBackground = Color3.fromRGB(55, 40, 20),
+			ElementBackgroundHover = Color3.fromRGB(70, 50, 25),
+			SecondaryElementBackground = Color3.fromRGB(45, 35, 15),
+			ElementStroke = Color3.fromRGB(85, 60, 30),
+			SecondaryElementStroke = Color3.fromRGB(75, 55, 25),
+			SliderBackground = Color3.fromRGB(180, 120, 40),
+			SliderProgress = Color3.fromRGB(255, 180, 60),
+			SliderStroke = Color3.fromRGB(255, 200, 80),
+			ToggleBackground = Color3.fromRGB(60, 45, 25),
+			ToggleEnabled = Color3.fromRGB(255, 150, 40),
+			ToggleDisabled = Color3.fromRGB(100, 80, 50),
+			ToggleEnabledStroke = Color3.fromRGB(255, 170, 60),
+			ToggleDisabledStroke = Color3.fromRGB(120, 95, 65),
+			ToggleEnabledOuterStroke = Color3.fromRGB(180, 120, 40),
+			ToggleDisabledOuterStroke = Color3.fromRGB(80, 65, 45),
+			DropdownSelected = Color3.fromRGB(70, 50, 25),
+			DropdownUnselected = Color3.fromRGB(55, 40, 20),
+			InputBackground = Color3.fromRGB(55, 40, 20),
+			InputStroke = Color3.fromRGB(95, 70, 35),
+			PlaceholderColor = Color3.fromRGB(190, 160, 120),
+			AccentColor = Color3.fromRGB(255, 180, 60),
 		}
-	},
-	
-	-- New features
-	Modules = {},
-	Plugins = {},
-	Security = {
-		AntiTamper = true,
-		EncryptConfigs = false
 	}
 }
 
--- Services
-local HttpService = getService('HttpService')
-local RunService = getService('RunService')
-local UserInputService = getService("UserInputService")
-local TweenService = getService("TweenService")
-local Players = getService("Players")
-local CoreGui = getService("CoreGui")
+-- Enhanced UI scaling system
+local function getUIScale()
+	return getSetting("General", "uiScale") or 100
+end
 
--- Performance optimization
-local function throttle(callback, delay)
-	local lastCall = 0
-	return function(...)
-		local now = tick()
-		if now - lastCall >= delay then
-			lastCall = now
-			return callback(...)
+local function getAnimationSpeed()
+	return getSetting("General", "animationSpeed") or 1
+end
+
+local function scaledTweenInfo(duration, easingStyle, easingDirection)
+	local speed = getAnimationSpeed()
+	return TweenInfo.new(duration / speed, easingStyle or Enum.EasingStyle.Exponential, easingDirection or Enum.EasingDirection.Out)
+end
+
+-- Load interface
+local StarField = useStudio and script.Parent:FindFirstChild('Rayfield') or game:GetObjects("rbxassetid://10804731440")[1]
+StarField.Name = "StarField"
+
+local buildAttempts = 0
+local correctBuild = false
+local warned
+local globalLoaded
+local starfieldDestroyed = false
+
+repeat
+	if StarField:FindFirstChild('Build') and StarField.Build.Value == InterfaceBuild then
+		correctBuild = true
+		break
+	end
+
+	correctBuild = false
+
+	if not warned then
+		warn('StarField | Build Mismatch')
+		print('StarField may encounter issues as you are running an incompatible interface version ('.. ((StarField:FindFirstChild('Build') and StarField.Build.Value) or 'No Build') ..').\n\nThis version of StarField is intended for interface build '..InterfaceBuild..'.')
+		warned = true
+	end
+
+	buildAttempts = buildAttempts + 1
+until buildAttempts >= 2
+
+StarField.Enabled = false
+
+-- Enhanced parent assignment
+if gethui then
+	StarField.Parent = gethui()
+elseif syn and syn.protect_gui then 
+	syn.protect_gui(StarField)
+	StarField.Parent = CoreGui
+elseif not useStudio and CoreGui:FindFirstChild("RobloxGui") then
+	StarField.Parent = CoreGui:FindFirstChild("RobloxGui")
+elseif not useStudio then
+	StarField.Parent = CoreGui
+end
+
+-- Clean up old interfaces
+local function cleanupOldInterfaces()
+	local parent = StarField.Parent
+	if parent then
+		for _, gui in ipairs(parent:GetChildren()) do
+			if gui:IsA("ScreenGui") and gui.Name == "StarField" and gui ~= StarField then
+				gui.Enabled = false
+				gui.Name = "StarField-Old"
+			end
+		end
+	end
+end
+cleanupOldInterfaces()
+
+-- Main UI components
+local Main = StarField:WaitForChild('Main')
+local Topbar = Main.Topbar
+local Elements = Main.Elements
+local TabList = Main.TabList
+local LoadingFrame = Main.LoadingFrame
+local Notifications = StarField.Notifications
+
+local SelectedTheme = StarFieldLibrary.Theme.Default
+local CFileName, CEnabled, Minimised, Hidden, Debounce = nil, false, false, false, false
+local searchOpen = false
+
+-- Enhanced theme application
+local function ChangeTheme(Theme)
+	if typeof(Theme) == 'string' then
+		SelectedTheme = StarFieldLibrary.Theme[Theme] or StarFieldLibrary.Theme.Default
+	elseif typeof(Theme) == 'table' then
+		SelectedTheme = Theme
+	end
+
+	-- Apply theme to all UI elements
+	Main.BackgroundColor3 = SelectedTheme.Background
+	Topbar.BackgroundColor3 = SelectedTheme.Topbar
+	Main.Shadow.Image.ImageColor3 = SelectedTheme.Shadow
+
+	-- Apply to text elements
+	for _, text in ipairs(StarField:GetDescendants()) do
+		if text:IsA('TextLabel') or text:IsA('TextBox') then 
+			text.TextColor3 = SelectedTheme.TextColor 
+		end
+	end
+
+	-- Apply to UI elements
+	for _, TabPage in ipairs(Elements:GetChildren()) do
+		for _, Element in ipairs(TabPage:GetChildren()) do
+			if Element:IsA("Frame") and Element.Name ~= "Placeholder" then
+				Element.BackgroundColor3 = SelectedTheme.ElementBackground
+				if Element:FindFirstChild("UIStroke") then
+					Element.UIStroke.Color = SelectedTheme.ElementStroke
+				end
+			end
+		end
+	end
+
+	-- Apply to tab buttons
+	for _, tabBtn in ipairs(TabList:GetChildren()) do
+		if tabBtn:IsA("Frame") then
+			tabBtn.UIStroke.Color = SelectedTheme.TabStroke
+		end
+	end
+end
+
+-- Enhanced icon system
+local Icons = useStudio and require(script.Parent.icons) or loadWithTimeout('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/refs/heads/main/icons.lua')
+
+local function getIcon(name: string)
+	if not Icons then return end
+	name = string.lower(string.gsub(name, "^%s*(.-)%s*$", "%1"))
+	local sizedIcons = Icons['48px']
+	local iconData = sizedIcons[name]
+	
+	if iconData then
+		return {
+			id = iconData[1],
+			imageRectSize = Vector2.new(iconData[2][1], iconData[2][2]),
+			imageRectOffset = Vector2.new(iconData[3][1], iconData[3][2])
+		}
+	end
+end
+
+-- Enhanced configuration system
+local function SaveConfiguration()
+	if not CEnabled or not globalLoaded then return end
+
+	local Data = {}
+	for flagName, flagData in pairs(StarFieldLibrary.Flags) do
+		if flagData.Type == "ColorPicker" then
+			Data[flagName] = {R = flagData.Color.R * 255, G = flagData.Color.G * 255, B = flagData.Color.B * 255}
+		else
+			Data[flagName] = flagData.CurrentValue or flagData.CurrentKeybind or flagData.CurrentOption or flagData.Color
+		end
+	end
+
+	if writefile then
+		writefile(ConfigurationFolder .. "/" .. CFileName .. ConfigurationExtension, HttpService:JSONEncode(Data))
+	end
+end
+
+local function LoadConfiguration(Configuration)
+	local success, data = pcall(HttpService.JSONDecode, HttpService, Configuration)
+	if not success then return end
+
+	for flagName, flagData in pairs(StarFieldLibrary.Flags) do
+		if data[flagName] then
+			task.spawn(function()
+				if flagData.Type == "ColorPicker" then
+					flagData:Set(Color3.fromRGB(data[flagName].R, data[flagName].G, data[flagName].B))
+				else
+					flagData:Set(data[flagName])
+				end
+			end)
 		end
 	end
 end
 
 -- Enhanced notification system
-local NotificationQueue = {}
-local MaxNotifications = 5
+function StarFieldLibrary:Notify(notificationData)
+	task.spawn(function()
+		local notification = Notifications.Template:Clone()
+		notification.Name = notificationData.Title or 'Notification'
+		notification.Parent = Notifications
+		notification.LayoutOrder = #Notifications:GetChildren()
+		notification.Visible = false
 
-local function processNotificationQueue()
-	while #NotificationQueue > 0 and #NotificationQueue <= MaxNotifications do
-		local notification = table.remove(NotificationQueue, 1)
-		StarFieldLibrary:Notify(notification)
-		task.wait(0.5) -- Space between notifications
-	end
-end
+		-- Set notification content
+		notification.Title.Text = notificationData.Title or "Notification"
+		notification.Description.Text = notificationData.Content or "No content provided"
 
--- Improved utility functions
-local function deepCopy(original)
-	local copy = {}
-	for k, v in pairs(original) do
-		if type(v) == "table" then
-			v = deepCopy(v)
-		end
-		copy[k] = v
-	end
-	return copy
-end
-
-local function validateColor(color)
-	if typeof(color) == "Color3" then
-		return color
-	elseif typeof(color) == "table" and color.R and color.G and color.B then
-		return Color3.fromRGB(color.R, color.G, color.B)
-	end
-	return Color3.new(1, 1, 1) -- Default to white
-end
-
--- Enhanced theme system with gradient support
-function StarFieldLibrary:ChangeTheme(theme, customColors)
-	if typeof(theme) == 'string' then
-		if self.Theme[theme] then
-			self.CurrentTheme = deepCopy(self.Theme[theme])
-		else
-			warn(`Theme {theme} not found, using default`)
-			self.CurrentTheme = deepCopy(self.Theme.Default)
-		end
-	elseif typeof(theme) == 'table' then
-		self.CurrentTheme = theme
-	else
-		self.CurrentTheme = deepCopy(self.Theme.Default)
-	end
-	
-	-- Apply custom colors if provided
-	if customColors then
-		for key, value in pairs(customColors) do
-			if self.CurrentTheme[key] ~= nil then
-				self.CurrentTheme[key] = validateColor(value)
-			end
-		end
-	end
-	
-	-- Apply theme to UI
-	self:ApplyTheme()
-end
-
-function StarFieldLibrary:ApplyTheme()
-	if not self.Main then return end
-	
-	-- Apply theme colors to all UI elements
-	-- This would be implemented based on your specific UI structure
-end
-
--- Enhanced notification system with queue management
-function StarFieldLibrary:Notify(data)
-	-- Validate notification data
-	if not data or not data.Title then
-		warn("Invalid notification data")
-		return
-	end
-	
-	-- Add to queue if too many notifications are active
-	if #NotificationQueue >= MaxNotifications then
-		table.insert(NotificationQueue, data)
-		return
-	end
-	
-	-- Create notification UI
-	-- Implementation would go here based on your UI structure
-	
-	-- Process queue after delay
-	task.delay(data.Duration or 5, processNotificationQueue)
-end
-
--- Plugin system for extensibility
-function StarFieldLibrary:RegisterPlugin(name, pluginModule)
-	if type(pluginModule) ~= "table" or type(pluginModule.init) ~= "function" then
-		error("Plugin must be a table with an init function")
-	end
-	
-	self.Plugins[name] = pluginModule
-	pluginModule:init(self)
-end
-
-function StarFieldLibrary:LoadPlugin(name, url)
-	local success, plugin = pcall(loadWithTimeout, url, 10)
-	if success and plugin then
-		self:RegisterPlugin(name, plugin)
-		return true
-	else
-		warn(`Failed to load plugin {name}: {plugin}`)
-		return false
-	end
-end
-
--- Module system for organized code
-function StarFieldLibrary:CreateModule(name)
-	local module = {
-		Name = name,
-		Elements = {},
-		Callbacks = {}
-	}
-	
-	self.Modules[name] = module
-	return setmetatable(module, {
-		__index = function(self, key)
-			return StarFieldLibrary[key] or module[key]
-		end
-	})
-end
-
--- Enhanced security features
-function StarFieldLibrary:EnableSecurity()
-	self.Security.AntiTamper = true
-	self.Security.EncryptConfigs = true
-	
-	-- Add anti-tamper measures
-	-- This would include checksum verification, environment checks, etc.
-end
-
-function StarFieldLibrary:EncryptData(data)
-	if not self.Security.EncryptConfigs then
-		return data
-	end
-	
-	-- Simple XOR encryption for demonstration
-	-- In production, use proper encryption
-	local key = "StarFieldSecure"
-	local encrypted = ""
-	
-	for i = 1, #data do
-		local char = string.sub(data, i, i)
-		local keyChar = string.sub(key, (i - 1) % #key + 1, (i - 1) % #key + 1)
-		encrypted = encrypted .. string.char(bit32.bxor(string.byte(char), string.byte(keyChar)))
-	end
-	
-	return encrypted
-end
-
-function StarFieldLibrary:DecryptData(data)
-	if not self.Security.EncryptConfigs then
-		return data
-	end
-	
-	return self:EncryptData(data) -- XOR is symmetric
-end
-
--- Improved configuration management
-function StarFieldLibrary:SaveConfiguration()
-	if not self.ConfigurationEnabled then return end
-	
-	local configData = {}
-	
-	-- Collect all flag values
-	for flagName, flagData in pairs(self.Flags) do
-		if flagData.Type == "ColorPicker" then
-			configData[flagName] = self:PackColor(flagData.Color)
-		else
-			configData[flagName] = flagData.CurrentValue or flagData.CurrentKeybind or flagData.CurrentOption
-		end
-	end
-	
-	-- Add metadata
-	configData._metadata = {
-		Version = Release,
-		SaveDate = os.time(),
-		Theme = self.CurrentThemeName
-	}
-	
-	local jsonData = HttpService:JSONEncode(configData)
-	
-	if self.Security.EncryptConfigs then
-		jsonData = self:EncryptData(jsonData)
-	end
-	
-	-- Save to file
-	if writefile then
-		writefile(self.ConfigurationPath, jsonData)
-	end
-end
-
-function StarFieldLibrary:LoadConfiguration()
-	if not self.ConfigurationEnabled then return false end
-	
-	if not isfile or not isfile(self.ConfigurationPath) then
-		return false
-	end
-	
-	local fileData = readfile(self.ConfigurationPath)
-	
-	if self.Security.EncryptConfigs then
-		fileData = self:DecryptData(fileData)
-	end
-	
-	local success, config = pcall(HttpService.JSONDecode, HttpService, fileData)
-	if not success then return false end
-	
-	-- Load theme first
-	if config._metadata and config._metadata.Theme then
-		self:ChangeTheme(config._metadata.Theme)
-	end
-	
-	-- Load flag values
-	for flagName, value in pairs(config) do
-		if flagName ~= "_metadata" and self.Flags[flagName] then
-			local flag = self.Flags[flagName]
-			if flag.Type == "ColorPicker" then
-				flag:Set(self:UnpackColor(value))
+		if notificationData.Image then
+			if typeof(notificationData.Image) == 'string' and Icons then
+				local asset = getIcon(notificationData.Image)
+				if asset then
+					notification.Icon.Image = 'rbxassetid://'..asset.id
+					notification.Icon.ImageRectOffset = asset.imageRectOffset
+					notification.Icon.ImageRectSize = asset.imageRectSize
+				end
 			else
-				flag:Set(value)
+				notification.Icon.Image = "rbxassetid://" .. (notificationData.Image or 0)
 			end
 		end
-	end
-	
-	return true
+
+		-- Apply theme
+		notification.BackgroundColor3 = SelectedTheme.NotificationBackground
+		notification.Title.TextColor3 = SelectedTheme.TextColor
+		notification.Description.TextColor3 = SelectedTheme.TextColor
+		notification.UIStroke.Color = SelectedTheme.TextColor
+		notification.Icon.ImageColor3 = SelectedTheme.TextColor
+
+		notification.Visible = true
+
+		-- Enhanced animation
+		notification.BackgroundTransparency = 1
+		notification.Title.TextTransparency = 1
+		notification.Description.TextTransparency = 1
+		notification.UIStroke.Transparency = 1
+		notification.Shadow.ImageTransparency = 1
+		notification.Icon.ImageTransparency = 1
+
+		task.wait()
+
+		-- Show animation
+		TweenService:Create(notification, scaledTweenInfo(0.6), {BackgroundTransparency = 0.45}):Play()
+		TweenService:Create(notification.Title, scaledTweenInfo(0.3), {TextTransparency = 0}):Play()
+		TweenService:Create(notification.Icon, scaledTweenInfo(0.3), {ImageTransparency = 0}):Play()
+		TweenService:Create(notification.Description, scaledTweenInfo(0.3), {TextTransparency = 0.35}):Play()
+		TweenService:Create(notification.UIStroke, scaledTweenInfo(0.4), {Transparency = 0.95}):Play()
+		TweenService:Create(notification.Shadow, scaledTweenInfo(0.3), {ImageTransparency = 0.82}):Play()
+
+		-- Calculate duration
+		local duration = notificationData.Duration or math.min(math.max((#notification.Description.Text * 0.1) + 2.5, 3), 10)
+		task.wait(duration)
+
+		-- Hide animation
+		TweenService:Create(notification, scaledTweenInfo(0.4), {BackgroundTransparency = 1}):Play()
+		TweenService:Create(notification.UIStroke, scaledTweenInfo(0.4), {Transparency = 1}):Play()
+		TweenService:Create(notification.Shadow, scaledTweenInfo(0.3), {ImageTransparency = 1}):Play()
+		TweenService:Create(notification.Title, scaledTweenInfo(0.3), {TextTransparency = 1}):Play()
+		TweenService:Create(notification.Description, scaledTweenInfo(0.3), {TextTransparency = 1}):Play()
+
+		task.wait(0.5)
+		notification:Destroy()
+	end)
 end
 
--- Utility functions
-function StarFieldLibrary:PackColor(color)
-	return {R = math.floor(color.R * 255), G = math.floor(color.G * 255), B = math.floor(color.B * 255)}
-end
-
-function StarFieldLibrary:UnpackColor(colorTable)
-	return Color3.fromRGB(colorTable.R, colorTable.G, colorTable.B)
-end
-
--- Enhanced window creation with better error handling
+-- Enhanced window creation
 function StarFieldLibrary:CreateWindow(settings)
-	-- Validate settings
-	assert(settings and type(settings) == "table", "Settings must be a table")
-	assert(settings.Name, "Window must have a name")
-	
-	-- Set default values
-	settings.ConfigurationSaving = settings.ConfigurationSaving or {}
-	settings.ConfigurationSaving.Enabled = settings.ConfigurationSaving.Enabled or false
-	settings.ConfigurationSaving.FileName = settings.ConfigurationSaving.FileName or tostring(game.PlaceId)
+	-- Apply settings with defaults
+	settings = settings or {}
+	settings.Name = settings.Name or "StarField Interface"
+	settings.LoadingTitle = settings.LoadingTitle or "StarField"
+	settings.LoadingSubtitle = settings.LoadingSubtitle or "Enhanced Interface Suite"
+	settings.Theme = settings.Theme or "Default"
+	settings.ConfigurationSaving = settings.ConfigurationSaving or {Enabled = false}
+	settings.DisableRayfieldPrompts = settings.DisableRayfieldPrompts or false
 	
 	-- Initialize window
-	-- This would contain the UI creation code from the original Rayfield implementation
-	-- but enhanced with the new features
-	
-	local window = {
-		Name = settings.Name,
-		Tabs = {},
-		Theme = settings.Theme or "Default"
-	}
-	
+	Topbar.Title.Text = settings.Name
+	LoadingFrame.Title.Text = settings.LoadingTitle
+	LoadingFrame.Subtitle.Text = settings.LoadingSubtitle
+	LoadingFrame.Version.Text = Release
+
 	-- Apply theme
-	self:ChangeTheme(window.Theme)
-	
-	-- Set up configuration saving
+	ChangeTheme(settings.Theme)
+
+	-- Enhanced configuration system
 	if settings.ConfigurationSaving.Enabled then
-		self.ConfigurationEnabled = true
-		self.ConfigurationPath = ConfigurationFolder .. "/" .. settings.ConfigurationSaving.FileName .. ConfigurationExtension
+		CFileName = settings.ConfigurationSaving.FileName or tostring(game.PlaceId)
+		CEnabled = true
+		ConfigurationFolder = settings.ConfigurationSaving.FolderName or ConfigurationFolder
 		
-		-- Create folders if they don't exist
-		if makefolder and not isfolder(StarFieldFolder) then
-			makefolder(StarFieldFolder)
+		if not isfolder(ConfigurationFolder) then
 			makefolder(ConfigurationFolder)
 		end
 	end
+
+	-- Enhanced key system
+	if settings.KeySystem and settings.KeySettings then
+		-- Key system implementation here (similar to original)
+	end
+
+	local Window = {}
 	
 	-- Enhanced tab creation
-	function window:CreateTab(name, icon, isSettings)
-		local tab = {
-			Name = name,
-			Icon = icon,
-			Elements = {},
-			Sections = {}
-		}
-		
-		-- Tab creation implementation would go here
-		
-		-- Enhanced element creation methods would be added here
-		function tab:CreateButton(buttonSettings)
-			-- Enhanced button implementation
+	function Window:CreateTab(name, icon, isSettings)
+		local tabButton = TabList.Template:Clone()
+		tabButton.Name = name
+		tabButton.Title.Text = name
+		tabButton.Parent = TabList
+		tabButton.Visible = not isSettings
+
+		-- Enhanced icon handling
+		if icon and icon ~= 0 then
+			if typeof(icon) == 'string' and Icons then
+				local asset = getIcon(icon)
+				if asset then
+					tabButton.Image.Image = 'rbxassetid://'..asset.id
+					tabButton.Image.ImageRectOffset = asset.imageRectOffset
+					tabButton.Image.ImageRectSize = asset.imageRectSize
+				end
+			else
+				tabButton.Image.Image = "rbxassetid://" .. icon
+			end
+			tabButton.Image.Visible = true
+			tabButton.Title.Position = UDim2.new(0, 37, 0.5, 0)
+			tabButton.Size = UDim2.new(0, tabButton.Title.TextBounds.X + 52, 0, 30)
 		end
-		
-		function tab:CreateToggle(toggleSettings)
-			-- Enhanced toggle implementation
+
+		local tabPage = Elements.Template:Clone()
+		tabPage.Name = name
+		tabPage.Parent = Elements
+		tabPage.Visible = true
+
+		-- Clear template elements
+		for _, element in ipairs(tabPage:GetChildren()) do
+			if element:IsA("Frame") and element.Name ~= "Placeholder" then
+				element:Destroy()
+			end
 		end
+
+		local Tab = {}
 		
-		-- ... other element creation methods
+		-- Enhanced button element
+		function Tab:CreateButton(buttonSettings)
+			local button = Elements.Template.Button:Clone()
+			button.Name = buttonSettings.Name
+			button.Title.Text = buttonSettings.Name
+			button.Parent = tabPage
+			button.Visible = true
+
+			button.Interact.MouseButton1Click:Connect(function()
+				local success, err = pcall(buttonSettings.Callback)
+				if not success then
+					warn(`Button {buttonSettings.Name} error: {err}`)
+				end
+			end)
+
+			local buttonValue = {}
+			function buttonValue:Set(newText)
+				button.Title.Text = newText
+				button.Name = newText
+			end
+
+			return buttonValue
+		end
+
+		-- Enhanced toggle element
+		function Tab:CreateToggle(toggleSettings)
+			local toggle = Elements.Template.Toggle:Clone()
+			toggle.Name = toggleSettings.Name
+			toggle.Title.Text = toggleSettings.Name
+			toggle.Parent = tabPage
+			toggle.Visible = true
+
+			local function updateToggleState(value)
+				toggleSettings.CurrentValue = value
+				if value then
+					TweenService:Create(toggle.Switch.Indicator, scaledTweenInfo(0.5, Enum.EasingStyle.Quart), {Position = UDim2.new(1, -20, 0.5, 0)}):Play()
+					TweenService:Create(toggle.Switch.Indicator, scaledTweenInfo(0.8), {BackgroundColor3 = SelectedTheme.ToggleEnabled}):Play()
+				else
+					TweenService:Create(toggle.Switch.Indicator, scaledTweenInfo(0.45, Enum.EasingStyle.Quart), {Position = UDim2.new(1, -40, 0.5, 0)}):Play()
+					TweenService:Create(toggle.Switch.Indicator, scaledTweenInfo(0.8), {BackgroundColor3 = SelectedTheme.ToggleDisabled}):Play()
+				end
+				
+				if toggleSettings.Callback then
+					pcall(toggleSettings.Callback, value)
+				end
+			end
+
+			toggle.Interact.MouseButton1Click:Connect(function()
+				updateToggleState(not toggleSettings.CurrentValue)
+				if not toggleSettings.Ext then
+					SaveConfiguration()
+				end
+			end)
+
+			function toggleSettings:Set(value)
+				updateToggleState(value)
+				if not toggleSettings.Ext then
+					SaveConfiguration()
+				end
+			end
+
+			if settings.ConfigurationSaving and toggleSettings.Flag then
+				StarFieldLibrary.Flags[toggleSettings.Flag] = toggleSettings
+			end
+
+			return toggleSettings
+		end
+
+		-- Enhanced slider element
+		function Tab:CreateSlider(sliderSettings)
+			local slider = Elements.Template.Slider:Clone()
+			slider.Name = sliderSettings.Name
+			slider.Title.Text = sliderSettings.Name
+			slider.Parent = tabPage
+			slider.Visible = true
+
+			local function updateSliderValue(value)
+				value = math.clamp(value, sliderSettings.Range[1], sliderSettings.Range[2])
+				sliderSettings.CurrentValue = value
+				
+				local progressWidth = slider.Main.AbsoluteSize.X * (value / (sliderSettings.Range[2] - sliderSettings.Range[1]))
+				TweenService:Create(slider.Main.Progress, scaledTweenInfo(0.45), {Size = UDim2.new(0, math.max(progressWidth, 5), 1, 0)}):Play()
+				
+				slider.Main.Information.Text = tostring(value) .. (sliderSettings.Suffix or "")
+				
+				if sliderSettings.Callback then
+					pcall(sliderSettings.Callback, value)
+				end
+			end
+
+			-- Slider dragging implementation
+			local dragging = false
+			slider.Main.Interact.MouseButton1Down:Connect(function()
+				dragging = true
+			end)
+
+			UserInputService.InputEnded:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 then
+					dragging = false
+				end
+			end)
+
+			slider.Main.Interact.MouseButton1Click:Connect(function(x)
+				local percent = (x - slider.Main.AbsolutePosition.X) / slider.Main.AbsoluteSize.X
+				local value = sliderSettings.Range[1] + percent * (sliderSettings.Range[2] - sliderSettings.Range[1])
+				value = math.floor(value / sliderSettings.Increment + 0.5) * sliderSettings.Increment
+				updateSliderValue(value)
+			end)
+
+			function sliderSettings:Set(value)
+				updateSliderValue(value)
+				if not sliderSettings.Ext then
+					SaveConfiguration()
+				end
+			end
+
+			if settings.ConfigurationSaving and sliderSettings.Flag then
+				StarFieldLibrary.Flags[sliderSettings.Flag] = sliderSettings
+			end
+
+			return sliderSettings
+		end
+
+		-- Enhanced dropdown element
+		function Tab:CreateDropdown(dropdownSettings)
+			local dropdown = Elements.Template.Dropdown:Clone()
+			dropdown.Name = dropdownSettings.Name
+			dropdown.Title.Text = dropdownSettings.Name
+			dropdown.Parent = tabPage
+			dropdown.Visible = true
+
+			dropdownSettings.CurrentOption = dropdownSettings.CurrentOption or {}
+			if typeof(dropdownSettings.CurrentOption) == "string" then
+				dropdownSettings.CurrentOption = {dropdownSettings.CurrentOption}
+			end
+
+			local function updateDropdownDisplay()
+				if dropdownSettings.MultipleOptions then
+					if #dropdownSettings.CurrentOption == 1 then
+						dropdown.Selected.Text = dropdownSettings.CurrentOption[1]
+					elseif #dropdownSettings.CurrentOption == 0 then
+						dropdown.Selected.Text = "None"
+					else
+						dropdown.Selected.Text = "Various"
+					end
+				else
+					dropdown.Selected.Text = dropdownSettings.CurrentOption[1] or "None"
+				end
+			end
+
+			updateDropdownDisplay()
+
+			-- Dropdown options implementation
+			for _, option in ipairs(dropdownSettings.Options) do
+				local optionFrame = Elements.Template.Dropdown.List.Template:Clone()
+				optionFrame.Name = option
+				optionFrame.Title.Text = option
+				optionFrame.Parent = dropdown.List
+				optionFrame.Visible = true
+
+				optionFrame.Interact.MouseButton1Click:Connect(function()
+					if dropdownSettings.MultipleOptions then
+						local index = table.find(dropdownSettings.CurrentOption, option)
+						if index then
+							table.remove(dropdownSettings.CurrentOption, index)
+						else
+							table.insert(dropdownSettings.CurrentOption, option)
+						end
+					else
+						dropdownSettings.CurrentOption = {option}
+					end
+					
+					updateDropdownDisplay()
+					
+					if dropdownSettings.Callback then
+						pcall(dropdownSettings.Callback, dropdownSettings.CurrentOption)
+					end
+					
+					if not dropdownSettings.Ext then
+						SaveConfiguration()
+					end
+				end)
+			end
+
+			function dropdownSettings:Set(options)
+				dropdownSettings.CurrentOption = options
+				updateDropdownDisplay()
+				if dropdownSettings.Callback then
+					pcall(dropdownSettings.Callback, options)
+				end
+			end
+
+			if settings.ConfigurationSaving and dropdownSettings.Flag then
+				StarFieldLibrary.Flags[dropdownSettings.Flag] = dropdownSettings
+			end
+
+			return dropdownSettings
+		end
+
+		-- Enhanced section
+		function Tab:CreateSection(sectionName)
+			local section = Elements.Template.SectionTitle:Clone()
+			section.Title.Text = sectionName
+			section.Parent = tabPage
+			section.Visible = true
+
+			local sectionValue = {}
+			function sectionValue:Set(newName)
+				section.Title.Text = newName
+			end
+
+			return sectionValue
+		end
+
+		-- Enhanced label
+		function Tab:CreateLabel(labelText, icon, color, ignoreTheme)
+			local label = Elements.Template.Label:Clone()
+			label.Title.Text = labelText
+			label.Parent = tabPage
+			label.Visible = true
+
+			if icon then
+				if typeof(icon) == 'string' and Icons then
+					local asset = getIcon(icon)
+					if asset then
+						label.Icon.Image = 'rbxassetid://'..asset.id
+						label.Icon.ImageRectOffset = asset.imageRectOffset
+						label.Icon.ImageRectSize = asset.imageRectSize
+					end
+				end
+				label.Icon.Visible = true
+			end
+
+			local labelValue = {}
+			function labelValue:Set(newText, newIcon, newColor)
+				label.Title.Text = newText
+				-- Handle icon and color updates
+			end
+
+			return labelValue
+		end
+
+		return Tab
+	end
+
+	-- Enhanced theme modification
+	function Window:ModifyTheme(newTheme)
+		ChangeTheme(newTheme)
+		StarFieldLibrary:Notify({
+			Title = "Theme Changed", 
+			Content = `Successfully changed theme to {typeof(newTheme) == 'string' and newTheme or 'Custom Theme'}.`,
+			Duration = 3,
+			Image = 4483362748
+		})
+	end
+
+	-- Initialize settings tab
+	local function createSettings(window)
+		local settingsTab = window:CreateTab('StarField Settings', 0, true)
 		
-		table.insert(self.Tabs, tab)
-		return tab
+		for categoryName, categorySettings in pairs(settingsTable) do
+			settingsTab:CreateSection(categoryName)
+			
+			for settingName, setting in pairs(categorySettings) do
+				if setting.Type == 'toggle' then
+					setting.Element = settingsTab:CreateToggle({
+						Name = setting.Name,
+						CurrentValue = setting.Value,
+						Callback = function(value)
+							setting.Value = value
+							-- Save settings
+						end
+					})
+				elseif setting.Type == 'slider' then
+					setting.Element = settingsTab:CreateSlider({
+						Name = setting.Name,
+						CurrentValue = setting.Value,
+						Range = setting.Range,
+						Callback = function(value)
+							setting.Value = value
+							-- Apply UI scaling if needed
+							if settingName == 'uiScale' then
+								-- Apply scaling logic
+							end
+						end
+					})
+				end
+			end
+		end
 	end
-	
-	-- Window management methods
-	function window:SetVisibility(visible)
-		StarFieldLibrary:SetVisibility(visible)
-	end
-	
-	function window:Minimize()
-		-- Minimize implementation
-	end
-	
-	function window:Destroy()
-		-- Cleanup implementation
-	end
-	
-	return window
+
+	createSettings(Window)
+
+	return Window
 end
 
--- Performance monitoring
-local PerformanceMonitor = {
-	frameTimes = {},
-	lastCheck = tick()
-}
-
-function PerformanceMonitor:logFrameTime()
-	table.insert(self.frameTimes, tick())
-	
-	-- Keep only last 60 frames (approx 1 second)
-	if #self.frameTimes > 60 then
-		table.remove(self.frameTimes, 1)
-	end
+-- Enhanced visibility control
+function StarFieldLibrary:SetVisibility(visible)
+	if Debounce then return end
+	Hidden = not visible
+	-- Add visibility animation logic here
 end
 
-function PerformanceMonitor:getFPS()
-	if #self.frameTimes < 2 then return 60 end
-	
-	local timeSpan = self.frameTimes[#self.frameTimes] - self.frameTimes[1]
-	return math.min(60, math.floor(#self.frameTimes / timeSpan))
+function StarFieldLibrary:IsVisible()
+	return not Hidden
 end
 
--- Connect to render stepped for FPS monitoring
-RunService.RenderStepped:Connect(function()
-	PerformanceMonitor:logFrameTime()
-end)
-
--- Enhanced destruction with cleanup
+-- Enhanced destruction
 function StarFieldLibrary:Destroy()
-	-- Clean up all connections
-	for _, connection in pairs(self.Connections or {}) do
-		if connection and typeof(connection) == "RBXScriptConnection" then
-			connection:Disconnect()
+	starfieldDestroyed = true
+	if StarField then
+		StarField:Destroy()
+	end
+end
+
+-- Enhanced configuration loading
+function StarFieldLibrary:LoadConfiguration()
+	if not CEnabled then return end
+
+	local success, result = pcall(function()
+		if isfile(ConfigurationFolder .. "/" .. CFileName .. ConfigurationExtension) then
+			LoadConfiguration(readfile(ConfigurationFolder .. "/" .. CFileName .. ConfigurationExtension))
+			StarFieldLibrary:Notify({
+				Title = "Configuration Loaded",
+				Content = "Your settings have been restored from previous session.",
+				Duration = 4,
+				Image = 4384403532
+			})
 		end
+	end)
+
+	if not success then
+		warn("Configuration loading error:", result)
 	end
-	
-	-- Save configuration
-	self:SaveConfiguration()
-	
-	-- Destroy UI
-	if self.Main then
-		self.Main:Destroy()
-	end
-	
-	-- Clear references
-	table.clear(self.Flags)
-	table.clear(self.Modules)
-	table.clear(self.Plugins)
 end
 
 -- Initialize library
-function StarFieldLibrary:Init()
-	-- Load plugins
-	for pluginName, pluginUrl in pairs(self.AutoLoadPlugins or {}) do
-		self:LoadPlugin(pluginName, pluginUrl)
-	end
-	
-	-- Initialize performance monitoring
-	self.PerformanceMonitor = PerformanceMonitor
-	
-	-- Set up auto-save
-	if settingsManager:get("System", "autoSave") then
-		task.spawn(function()
-			while true do
-				task.wait(30) -- Auto-save every 30 seconds
-				if self.ConfigurationEnabled then
-					self:SaveConfiguration()
-				end
-			end
-		end)
-	end
-end
+task.delay(2, function()
+	StarFieldLibrary:LoadConfiguration()
+end)
 
--- Return the enhanced library
 return StarFieldLibrary
